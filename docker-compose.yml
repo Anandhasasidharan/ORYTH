@@ -1,0 +1,40 @@
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: oryth-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ./data:/data
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+
+  censys:
+    build: .
+    container_name: oryth-censys
+    volumes:
+      - ./scripts:/app
+      - ./data:/data
+    environment:
+      - CENSYS_TOKEN=${CENSYS_TOKEN}
+      - MY_PUBLIC_IP=${MY_PUBLIC_IP}
+    command: python /app/censys-monitor.py
+    restart: unless-stopped
+
+  hibp:
+    build: .
+    container_name: oryth-hibp
+    volumes:
+      - ./scripts:/app
+      - ./data:/data
+    environment:
+      - MY_EMAILS=${MY_EMAILS}
+    command: python hibp-monitor.py
+    restart: unless-stopped
+
+volumes:
+  grafana-data:

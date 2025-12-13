@@ -1,0 +1,19 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus-Censys
+    type: prometheus
+    access: proxy
+    url: http://censys:8000
+    isDefault: false
+
+  - name: Prometheus-HIBP
+    type: prometheus
+    access: proxy
+    url: http://hibp:8001
+    isDefault: false
+
+  - name: Infinity
+    type: yesoreyeram-infinity-datasource
+    jsonData:
+      timeoutInSeconds: 60
