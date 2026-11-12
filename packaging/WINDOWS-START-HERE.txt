@@ -1,0 +1,16 @@
+ORYTH 0.2.0 — Windows desktop preview
+
+1. Extract this ZIP to any folder you own.
+2. Double-click ORYTH.exe.
+3. Enter the email addresses you want to monitor. No breach API key is needed.
+4. Optional: enter your public IP and Censys Platform token for network exposure monitoring.
+5. Click Start monitoring. First start downloads and verifies the dashboard components.
+6. Click Copy password, then Open dashboard. Sign in with username admin and the copied password.
+
+Windows 10/11 x64. No Python, WSL, containers, or administrator installation is needed.
+Internet is required for first-run downloads and ongoing API lookups.
+Keep the desktop window open; closing it stops the services.
+Settings, logs, cached components, snapshots and metrics stay in %LOCALAPPDATA%\ORYTH.
+Email addresses are sent to XposedOrNot when monitoring starts. The optional IP and token are sent to Censys.
+
+Source and support: https://github.com/Anandhasasidharan/ORYTH

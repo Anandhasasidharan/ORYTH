@@ -9,3 +9,8 @@ data/*.json
 scripts/data/
 
 .oryth-state/
+build/
+dist/
+*.egg-info/
+settings.json
+settings.json.tmp

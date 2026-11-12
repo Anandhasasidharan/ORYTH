@@ -114,7 +114,7 @@ def main():
         breaches_gauge.labels(email).set(math.nan)
         success.labels(email).set(0)
         last_success.labels(email).set(0)
-    start_http_server(8001)
+    start_http_server(8001, addr='127.0.0.1')
     if not configured:
         logging.warning('XposedOrNot disabled: configure MY_EMAILS (no API key required)')
     data_dir = Path(os.getenv('DATA_DIR', str(Path(__file__).resolve().parents[1] / 'data')))

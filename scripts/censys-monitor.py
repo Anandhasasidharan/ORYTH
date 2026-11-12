@@ -79,7 +79,7 @@ def main():
     enabled.set(int(configured))
     open_ports.set(math.nan)
     services.set(math.nan)
-    start_http_server(8000)
+    start_http_server(8000, addr='127.0.0.1')
     if not configured:
         logging.warning('Censys disabled: configure CENSYS_TOKEN and MY_PUBLIC_IP')
     data_dir = Path(os.getenv('DATA_DIR', str(Path(__file__).resolve().parents[1] / 'data')))

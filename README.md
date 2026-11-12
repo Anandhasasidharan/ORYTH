@@ -1,131 +1,102 @@
 # ORYTH — Personal Cyber Risk Dashboard
 
-Self-hosted monitoring of your public IP and email breach exposure, using Python exporters, Prometheus, and Grafana.
+A Windows desktop app for monitoring email breach exposure and optional public-IP exposure. It runs locally, manages its own dashboard, and uses the free XposedOrNot email API. No Python, WSL, containers, or paid breach API key is required for the Windows download.
 
-Censys supplies existing observations of open ports and services; ORYTH looks them up hourly. These are observations from Censys, not an active or real-time scan. The free, keyless XposedOrNot API supplies email breach results, checked daily. Prometheus scrapes both exporters every 15 seconds and retains metrics for 30 days.
+## Windows quick start
 
-## Configure monitoring
+1. Download **ORYTH-Windows-x64.zip** from [Releases](https://github.com/Anandhasasidharan/ORYTH/releases).
+2. Extract the ZIP and double-click **ORYTH.exe**.
+3. Enter the email addresses you want to monitor.
+4. Optional: enter your public IP and Censys Platform token to enable network exposure monitoring.
+5. Click **Start monitoring**. The first start downloads and verifies Grafana and Prometheus automatically. Later starts reuse the cached components.
+6. Click **Copy password**, then **Open dashboard**. Sign in as **admin** using the copied password.
 
-If `.env` does not exist yet:
+Keep the desktop window open while monitoring. **Stop** or closing the window stops all four local processes. Windows 10/11 **x64**, internet access, and free space for the downloaded components are required. No administrator installation or Windows service setup is needed. The application is currently an unsigned desktop preview; release checks cover executable startup and the native stack, rather than a formal Windows compatibility certification.
 
-```bash
-cp config/.env.example .env
+## What it monitors
+
+- **Email breaches:** XposedOrNot is checked daily. Results show known breach counts for each address and the total across monitored addresses. A breach affecting two addresses counts twice in that total. No breach API key is needed.
+- **Network exposure (optional):** Censys is checked hourly for observations of open ports and services on your configured public IP. A [Censys Platform Personal Access Token](https://docs.censys.com/reference/get-started) is required. These are Censys observations, rather than a live port scan.
+- **Monitoring health:** the dashboard displays integration status and time since the last successful lookup. Missing or failed lookups remain unknown; they are never silently reported as clean results.
+
+The free XposedOrNot endpoint supports 25 checks/hour and 100/day per public IP. ORYTH spaces requests, enforces the hourly budget within a daily cycle, accepts at most 100 unique addresses, and honors rate-limit backoff. Other users of your public IP and repeated app restarts share the provider's quota. Breach coverage may differ from other providers. The basic endpoint returns breach names rather than dates, so ORYTH does not invent a days-since-breach result.
+
+## Where your data goes
+
+When monitoring starts, configured email addresses are sent over HTTPS to `api.xposedornot.com`. If network monitoring is enabled, the configured public IP and token are sent to `api.platform.censys.io`. No API requests are made by the desktop window until you start monitoring.
+
+Settings, the Censys token, generated dashboard password, downloaded components, logs, snapshots, and metrics are stored under:
+
+```text
+%LOCALAPPDATA%\ORYTH
 ```
 
-Edit `.env` with your settings:
+Use **Open data folder** to find them. Settings are local to your Windows account, not bundled into the executable or committed to this repository. The dashboard password is generated on first use and saved with the settings. Initial credentials do not reset an existing Grafana database.
 
-- `CENSYS_TOKEN`: a [Censys Platform Personal Access Token](https://docs.censys.com/reference/get-started).
-- `MY_PUBLIC_IP`: the IPv4 or IPv6 address to look up.
-- `CENSYS_ORGANIZATION_ID`: optional, to use organization entitlements.
-- `MY_EMAILS`: comma-separated email addresses to monitor through [XposedOrNot](https://xposedornot.com/api_doc). No breach API key or paid subscription is required. Old `HIBP_API_KEY` entries are ignored.
-- `GRAFANA_ADMIN_USER` and `GRAFANA_ADMIN_PASSWORD`: credentials for the initial Grafana admin account. Defaults are `admin` / `admin` when absent; set your password before starting.
+Grafana, Prometheus and both exporters listen only on the local computer: ports **3000**, **9090**, **8000**, and **8001**. Another app using one of those ports must be stopped before ORYTH starts. Metrics are retained for 30 days. Failed lookups preserve the last successful JSON snapshot while marking current metrics as unknown. Old snapshots are not loaded as current results at startup.
 
-Unused integration values can remain blank. The corresponding exporter stays available and reports disabled; unknown results do not become zero breaches or zero open ports.
+## Build the Windows application
 
-## Run directly in WSL/Linux (no Docker)
+Use Windows with Python **3.12 x64**, including Tcl/Tk. From the repository root, in PowerShell:
 
-The app can run as four native processes. Install the Python dependencies from `requirements.txt` in a virtual environment, and obtain the Linux binaries from the official [Prometheus downloads](https://prometheus.io/download/) and [Grafana downloads](https://grafana.com/grafana/download) pages. Verify their published SHA256 checksums.
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-build.txt
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m PyInstaller --clean --noconfirm ORYTH.spec
+```
 
-The launcher searches `PATH`, then `/tmp/oryth-native-runtime/prometheus/*/prometheus` and `/tmp/oryth-native-runtime/grafana/*/bin/grafana`. Set `GRAFANA_HOME` if your Grafana installation stores its `conf/` and `public/` directories separately from the executable.
+`dist\ORYTH.exe` is a portable executable containing the Python app and its Python/Tk dependencies. It downloads the independent dashboard components on first start; they are not part of the executable. Only selected scripts and public configuration are bundled. `.env`, user settings, personal snapshots, development caches, and logs are excluded.
 
-From the directory containing this README:
+To create the distributable ZIP and checksum file, activate the virtual environment and run:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+.\packaging\build-windows.ps1
+```
+
+The output is `dist\ORYTH-Windows-x64.zip` and `dist\SHA256SUMS.txt`. The [Windows application workflow](https://github.com/Anandhasasidharan/ORYTH/actions/workflows/windows.yml) runs the tests, builds the executable on Windows, checks the packaged desktop window, and tests the packaged app against real Windows Grafana and Prometheus processes with synthetic API data. Successful builds upload the ZIP and its checksum as workflow artifacts.
+
+## Run from source
+
+On Windows, install `requirements.txt` and launch:
+
+```powershell
+python oryth_app.py
+```
+
+The same desktop code also supports Linux x64 with Tcl/Tk installed. An optional console launcher is available for WSL/Linux or development:
 
 ```bash
 python3 scripts/run-local.py
 ```
 
-Open [Grafana](http://127.0.0.1:3000/d/oryth-cyber-risk). The launcher reads your existing `.env`, generates configuration using localhost addresses, and saves logs, snapshots and databases under `/tmp/oryth-local-state`. Set `GRAFANA_ADMIN_USER` and `GRAFANA_ADMIN_PASSWORD` in `.env` before the first launch; the fallback credentials are `admin` / `admin`. Initial credentials do not reset an existing Grafana database.
+Console mode can read a local `.env` copied from `config/.env.example`, or use saved application settings. The desktop app uses its setup form and per-user settings instead of requiring `.env`. Older `HIBP_API_KEY` entries are ignored. Runtime binaries are downloaded automatically, or can be supplied through the console launcher's `--runtime` argument. Existing development binaries under `/tmp/oryth-native-runtime` can be reused with that argument.
 
-Press Ctrl+C to stop all four processes. The launcher also stops the stack if any process exits. For storage that survives temporary-file cleanup, specify a persistent state directory:
+## Tests and troubleshooting
+
+Install `requirements-dev.txt`, then run the unit tests:
 
 ```bash
-python3 scripts/run-local.py --state "$PWD/.oryth-state"
+python3 -m pytest -q
 ```
 
-To repeat the full native smoke test with synthetic data, while the normal stack is stopped:
+To run the synthetic native stack test from source:
 
 ```bash
 python3 tests/smoke_native.py
 ```
 
-This starts real exporters, Prometheus and Grafana on local ports, checks all dashboard queries and expected metric values, then stops the services. It uses dummy credentials, synthetic addresses and mocked external API responses. It never sends your configured credentials to Censys or XposedOrNot. The report path is printed when the test finishes. Synthetic tests do not establish breach coverage for your own addresses. The XposedOrNot endpoint was also tested separately using its public documentation sample address.
+The test starts real local services, verifies expected metrics, checks dashboard provisioning and all dashboard queries, then stops the services. External API calls are replaced with synthetic responses; your email addresses and credentials are not sent to either provider. It prints the validation report path.
 
-## Run with Docker (optional)
+For a packaged executable, `--self-test --report <path>` runs the same test; `--check-gui --report <path>` checks that its desktop window can be created. These commands are intended for release validation.
 
-Install Docker Engine with the Compose plugin, or Docker Desktop with Linux containers enabled. Run these commands from the directory containing this README and `docker-compose.yml` (the repository root).
+If startup fails, open the data folder and inspect `logs`. A port-conflict message means another instance or application is running. Failed downloads can be retried with **Start monitoring**; archives must match upstream SHA256 checksums before they are installed. Dashboard availability confirms the local services are running; check the lookup-status panels separately for API success. Authentication or quota errors remain visible as failed lookups.
 
-```bash
-docker compose config --quiet
-docker compose up --build -d
-docker compose ps
-```
+## References
 
-Open [Grafana](http://localhost:3000/d/oryth-cyber-risk) and sign in with your configured credentials. Allow about 30 seconds for the first Prometheus scrape. Grafana is bound to localhost; Prometheus and the exporters are accessible only inside the Compose network.
-
-The dashboard shows port and service counts, total and per-email breach counts, integration status, and time since the last successful lookup. Missing credentials, unindexed hosts, API failures, and unavailable exporters display disabled/failed or unknown values. Total breach count is unknown if any configured email lookup fails. A breach affecting two monitored addresses counts once for each address. Breach counts reflect XposedOrNot's database and can differ from other providers. The basic endpoint returns breach names, so no breach-date or days-since-breach metric is invented.
-
-## Check and troubleshoot
-
-For the optional Docker setup, after allowing about 30 seconds for scraping, validate Grafana health, both Prometheus targets, and every dashboard query:
-
-```bash
-python3 scripts/check-stack.py
-```
-
-This checks infrastructure and query syntax. Check dashboard lookup status separately to confirm live API access.
-
-```bash
-docker compose logs --tail=100 censys xposedornot prometheus grafana
-```
-
-Exporter container health checks confirm the metrics endpoint is running; check dashboard lookup status for API success. HTTP 401/403 usually requires checking credentials and permissions. A Censys 404 is treated as unknown, not a clean scan. Only XposedOrNot's explicit `{"Error":"Not found"}` response is accepted as zero breaches; unexpected 404s and malformed responses remain unknown. Requests are spaced at least one second apart, batches respect 25 attempts per rolling hour, and configuration is limited to 100 unique addresses per daily cycle. HTTP 429 honors a numeric `Retry-After` header, with a one-hour fallback. These budgets are local to one running exporter; repeated restarts and other users of your public IP share the provider's quota. Failed addresses are checked again during the next daily cycle.
-
-Snapshots are stored in `data/` using atomic writes. Failed lookups preserve the last successful snapshot while setting the current result metrics to unknown and lookup status to failed. Existing snapshots are historical and are not loaded as current results at startup. XposedOrNot filenames hash the full email address, preventing collisions between addresses with the same local part. Metrics still contain email labels, so keep access to this dashboard private.
-
-Grafana and Prometheus retain their state in named Docker volumes. On an existing Grafana volume, changing the initial admin credentials in `.env` does not reset the existing account password. To stop services while retaining data:
-
-```bash
-docker compose down
-```
-
-Rebuild after changing Python code. Restart/recreate exporters after changing credentials:
-
-```bash
-docker compose up --build -d
-```
-
-## Local development and tests
-
-Python 3.12 or later:
-
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install -r requirements-dev.txt
-python -m pytest -q
-```
-
-Tests use synthetic API responses and temporary data. They cover successful responses, failures, rate limiting, malformed payloads, exporter startup, metrics serialization, persistence, and configuration consistency. They do not contact real accounts.
-
-Optional local diagnostics (use `python3` outside the activated virtual environment):
-
-```bash
-python debug_env.py
-python apicheck.py
-```
-
-`debug_env.py` reports only configuration presence. `apicheck.py` performs one real Censys lookup, saves a successful result, and exits with status 0 on success, 1 on lookup failure, or 2 on invalid configuration. This may consume Censys credits.
-
-To run an exporter without Docker:
-
-```bash
-python scripts/censys-monitor.py
-python scripts/xposedornot-monitor.py
-```
-
-Run each exporter in its own terminal. Local runs read `.env` relative to the project directory and save to the project's `data/` directory, regardless of the shell's working directory. Set `DATA_DIR` to override the output directory.
-
-## API references
-
-- [Censys host lookup and response schema](https://docs.censys.com/reference/get-started)
-- [XposedOrNot free API, response models and rate limits](https://xposedornot.com/api_doc)
+- [XposedOrNot free API and limits](https://xposedornot.com/api_doc)
+- [Censys host lookup and authentication](https://docs.censys.com/reference/get-started)
+- [Grafana Windows installation](https://grafana.com/docs/grafana/latest/setup-grafana/installation/windows/)
+- [Prometheus downloads](https://prometheus.io/download/)
+- [Third-party components](THIRD_PARTY.md)

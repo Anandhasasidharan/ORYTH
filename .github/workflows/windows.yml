@@ -1,0 +1,59 @@
+name: Windows application
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+          cache: pip
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Unit tests
+        run: python -m pytest -q
+      - name: Build portable Windows executable
+        shell: pwsh
+        run: ./packaging/build-windows.ps1
+      - name: Test packaged desktop window
+        shell: pwsh
+        run: |
+          $report = Join-Path $env:RUNNER_TEMP 'oryth-gui.json'
+          $process = Start-Process -FilePath './dist/ORYTH.exe' -ArgumentList @('--check-gui', '--report', $report) -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Packaged GUI failed to start.' }
+          Get-Content $report
+          if ((Get-Content $report | ConvertFrom-Json).gui -ne 'PASS') { throw 'GUI report did not pass.' }
+      - name: Test packaged app and Windows runtimes
+        shell: pwsh
+        run: |
+          $report = Join-Path $env:RUNNER_TEMP 'oryth-smoke.json'
+          $process = Start-Process -FilePath './dist/ORYTH.exe' -ArgumentList @('--self-test', '--report', $report) -Wait -PassThru
+          if (Test-Path $report) { Get-Content $report }
+          if ($process.ExitCode -ne 0) { throw 'Packaged native services failed.' }
+          if ((Get-Content $report | ConvertFrom-Json).result -ne 'PASS') { throw 'Native stack report did not pass.' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ORYTH-Windows-x64
+          path: |
+            dist/ORYTH-Windows-x64.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-validation
+          path: |
+            ${{ runner.temp }}/oryth-gui.json
+            ${{ runner.temp }}/oryth-smoke.json
+            ${{ runner.temp }}/oryth-smoke-*/logs/*.log
+          if-no-files-found: ignore

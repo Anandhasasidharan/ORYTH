@@ -214,7 +214,7 @@ def test_main_starts_exporter_without_import_side_effects(load_monitor, monkeypa
     monkeypatch.setitem(namespace, 'scan' if name == 'censys' else 'check_email', lookup)
     with pytest.raises(EndCycle):
         monitor.main()
-    server.assert_called_once_with(8000 if name == 'censys' else 8001)
+    server.assert_called_once_with(8000 if name == 'censys' else 8001, addr='127.0.0.1')
     assert value(registry, f'{name}_monitor_enabled') == int(configured)
     assert lookup.call_count == int(configured)
 

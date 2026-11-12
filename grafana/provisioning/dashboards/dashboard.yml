@@ -5,4 +5,4 @@ providers:
     type: file
     updateIntervalSeconds: 10
     options:
-      path: /var/lib/grafana/dashboards
+      path: __ORYTH_DASHBOARDS__

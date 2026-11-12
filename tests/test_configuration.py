@@ -6,25 +6,17 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_compose_scrape_targets_and_persistence():
-    compose = yaml.safe_load((ROOT / 'docker-compose.yml').read_text())
-    services = compose['services']
+def test_scrape_targets_are_local_services():
     config = yaml.safe_load((ROOT / 'prometheus/prometheus.yml').read_text())
-    for scrape in config['scrape_configs']:
-        target = scrape['static_configs'][0]['targets'][0]
-        name, port = target.split(':')
-        assert name in services
-        assert f'localhost:{port}/metrics' in str(services[name]['healthcheck']['test'])
-        assert services[name]['environment']['DATA_DIR'] == '/data'
-        assert './data:/data' in services[name]['volumes']
-    assert services['grafana']['ports'] == ['127.0.0.1:3000:3000']
-    assert 'prometheus-data' in compose['volumes']
+    targets = {scrape['job_name']: scrape['static_configs'][0]['targets'][0]
+               for scrape in config['scrape_configs']}
+    assert targets == {'censys': '127.0.0.1:8000', 'xposedornot': '127.0.0.1:8001'}
 
 
 def test_dashboard_and_provisioning_use_same_datasource():
     provision = yaml.safe_load((ROOT / 'grafana/provisioning/datasources/datasource.yml').read_text())
     datasource = provision['datasources'][0]
-    assert datasource['url'] == 'http://prometheus:9090'
+    assert datasource['url'] == 'http://127.0.0.1:9090'
     for path in (ROOT / 'grafana/dashboards').glob('*.json'):
         dashboard = json.loads(path.read_text())
         assert dashboard['uid']
@@ -37,5 +29,6 @@ def test_dashboard_and_provisioning_use_same_datasource():
 
 
 def test_all_yaml_files_parse():
-    for path in ROOT.rglob('*.yml'):
-        assert isinstance(yaml.safe_load(path.read_text()), dict), path
+    for folder in (ROOT / 'prometheus', ROOT / 'grafana', ROOT / '.github'):
+        for path in folder.rglob('*.yml'):
+            assert isinstance(yaml.safe_load(path.read_text()), dict), path
