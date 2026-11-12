@@ -8,11 +8,22 @@ ORYTH 0.2.0 replaces the container setup with a native Windows desktop launcher,
 - The synthetic integration test runs the same entry points used by the desktop app, starts real Grafana and Prometheus, checks both exporters, validates expected metric values and all 10 dashboard queries, then stops the services.
 - Official Windows runtime archive and checksum URLs returned HTTP 200.
 
-## Windows release checks
+## Windows release checks — passed
 
-The Windows application workflow is the authoritative packaged-executable check. It runs unit tests on Windows, builds `ORYTH.exe`, creates the desktop window, downloads and verifies official Windows Grafana and Prometheus runtimes, and runs the packaged executable's synthetic end-to-end test. Each job saves JSON validation reports and build artifacts.
+[Windows build 43146547261](https://github.com/Anandhasasidharan/ORYTH/actions/runs/43146547261) passed on commit `5fda49e9c6335fa481e1afbbdb7019b05bf1e415`:
 
-See the workflow run associated with the release commit for the actual Windows results. Linux tests alone do not establish that a Windows executable works.
+- All **74 unit tests passed on Windows**.
+- PyInstaller built the portable Windows x64 executable successfully.
+- The packaged executable created and ran its desktop window event loop successfully.
+- The packaged application downloaded and checksum-verified the official native Windows Grafana and Prometheus runtimes.
+- All four local HTTP services became healthy.
+- Expected synthetic values arrived in Prometheus: two ports, two services, and four email breach matches.
+- Grafana dashboard provisioning, datasource health and the dashboard HTML page passed.
+- All **10 dashboard queries passed** through both Prometheus and Grafana.
+- Service shutdown and cleanup passed.
+- Test data paths contained spaces to exercise common Windows user-folder paths.
+
+The first Windows run exposed a missing Grafana SQLite parent directory. Startup now creates all service data folders explicitly, with regression coverage. The corrected build passed in full. The workflow retains JSON test reports and distributable artifacts. This is automated packaged-app validation; no claim is made about manual visual review or every Windows hardware configuration.
 
 ## Provider checks from the previous implementation
 
