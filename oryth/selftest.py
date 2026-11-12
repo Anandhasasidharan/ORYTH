@@ -14,7 +14,7 @@ from .settings import user_directory
 def run(report_path=None, runtime=None):
     report_path = Path(report_path or Path(tempfile.gettempdir()) / 'oryth-self-test.json').resolve()
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    state = Path(tempfile.mkdtemp(prefix='oryth-smoke-', dir=report_path.parent))
+    state = Path(tempfile.mkdtemp(prefix='oryth-smoke-user space-', dir=report_path.parent))
     manager = ServiceManager(state, runtime=runtime or user_directory() / 'runtime')
     password = secrets.token_urlsafe(24)
     settings = {'public_ip': '192.0.2.1', 'censys_token': 'synthetic-unused-token',

@@ -136,6 +136,7 @@ def test_process_environment_clears_inherited_credentials_and_quotes_paths(tmp_p
     data = yaml.safe_load((state / 'provisioning/dashboards/dashboard.yml').read_text())
     assert data['providers'][0]['options']['path'].endswith('/grafana/dashboards')
     assert env['GF_PATHS_DATA'] == str(state / 'grafana-data')
+    assert all((state / name).is_dir() for name in ('grafana-data', 'prometheus-data', 'plugins', 'snapshots'))
 
 
 def test_start_failure_stops_already_started_children(tmp_path, monkeypatch):

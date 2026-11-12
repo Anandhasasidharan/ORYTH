@@ -50,7 +50,9 @@ class ServiceManager:
         settings = validate_settings(settings)
         directory = self.directory
         directory.mkdir(parents=True, exist_ok=True)
-        (directory / 'logs').mkdir(exist_ok=True)
+        # Windows Grafana requires its SQLite parent directory to exist before startup.
+        for folder in ('logs', 'grafana-data', 'prometheus-data', 'plugins', 'snapshots'):
+            (directory / folder).mkdir(exist_ok=True)
         for kind in ('datasources', 'dashboards'):
             (directory / 'provisioning' / kind).mkdir(parents=True, exist_ok=True)
         source = self.root / 'grafana' / 'provisioning'
