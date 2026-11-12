@@ -1,19 +1,21 @@
 apiVersion: 1
+prune: true
+deleteDatasources:
+  - name: Prometheus-Censys
+    orgId: 1
+  - name: Prometheus-HIBP
+    orgId: 1
+  - name: Infinity
+    orgId: 1
 
 datasources:
-  - name: Prometheus-Censys
+  - name: Prometheus
+    uid: oryth-prometheus
     type: prometheus
     access: proxy
-    url: http://censys:8000
-    isDefault: false
-
-  - name: Prometheus-HIBP
-    type: prometheus
-    access: proxy
-    url: http://hibp:8001
-    isDefault: false
-
-  - name: Infinity
-    type: yesoreyeram-infinity-datasource
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
     jsonData:
-      timeoutInSeconds: 60
+      httpMethod: POST
+      timeInterval: 15s

@@ -1,61 +1,93 @@
-from dotenv import load_dotenv
-load_dotenv()   # ← THIS LINE WAS BROKEN BEFORE (load_dotimport → load_dotenv)
-
+"""Export Censys host observations to Prometheus."""
+import ipaddress
+import logging
+import math
 import os
-import json
-import time
-import requests
-from prometheus_client import start_http_server, Gauge
 from pathlib import Path
+import time
 
-Path("./data").mkdir(exist_ok=True)
+import requests
+from prometheus_client import Gauge, start_http_server
 
-CENSYS_TOKEN = os.getenv('CENSYS_TOKEN')
-MY_IP = os.getenv('MY_PUBLIC_IP', '').strip()
+from monitor_common import configure_logging, load_config, write_json
 
-if not CENSYS_TOKEN or not MY_IP:
-    print("FATAL: Missing CENSYS_TOKEN or MY_PUBLIC_IP")
-    exit(1)
+open_ports = Gauge('censys_open_ports_total', 'Distinct observed port numbers')
+services = Gauge('censys_services_total', 'Observed services')
+enabled = Gauge('censys_monitor_enabled', 'Censys credentials and IP configured')
+success = Gauge('censys_scrape_success', 'Last Censys lookup succeeded')
+last_success = Gauge('censys_last_success_timestamp_seconds', 'Last successful lookup')
 
-open_ports = Gauge('censys_open_ports_total', 'Open ports')
-services   = Gauge('censys_services_total', 'Services')
-certs      = Gauge('censys_certificates_total', 'Certificates')
-risk       = Gauge('censys_risk_score', 'Risk score')
 
-def scan():
-    print(f"[CENSYS] Scanning {MY_IP} at {time.strftime('%X')}")
+def scan(token, ip, data_dir, organization_id='', get=requests.get):
+    """Return success; leave failed or unknown observations as NaN."""
+    status = None
     try:
-        r = requests.get(
-            f"https://api.platform.censys.io/v3/global/asset/host/{MY_IP}",
-            headers={"Authorization": f"Bearer {CENSYS_TOKEN}"},
-            timeout=20
+        params = {'organization_id': organization_id} if organization_id else {}
+        response = get(
+            f'https://api.platform.censys.io/v3/global/asset/host/{ip}',
+            headers={'Authorization': f'Bearer {token}',
+                     'Accept': 'application/vnd.censys.api.v3.host.v1+json'},
+            params=params, timeout=20,
         )
-        if r.status_code == 200:
-            host = r.json().get('result', {}).get('host', {})
-            svcs = host.get('services', [])
-            ports = len({s.get('port') for s in svcs if s.get('port')})
-
-            open_ports.set(ports)
-            services.set(len(svcs))
-            certs.set(len(host.get('certificates', [])))
-            risk.set(host.get('risk', {}).get('score', 0))
-
-            with open("./data/censys_latest.json", "w") as f:
-                json.dump(host, f, indent=2)
-
-            print(f"CENSYS SUCCESS → {ports} open ports | Risk {host.get('risk',{}).get('score',0)}")
-        elif r.status_code == 404:
-            print("CENSYS: IP not indexed yet")
-            open_ports.set(0); services.set(0); certs.set(0); risk.set(0)
+        status = response.status_code
+        if response.status_code != 200:
+            raise ValueError(f'Censys HTTP {response.status_code}')
+        host = response.json()['result']['resource']
+        if not isinstance(host, dict):
+            raise ValueError('Invalid host response')
+        if 'services' in host:
+            observations = host['services']
         else:
-            print(f"CENSYS {r.status_code}: {r.text}")
-    except Exception as e:
-        print(f"CENSYS ERROR: {e}")
+            # Censys omits empty optional fields on some valid host records.
+            # Validate the returned host identity before treating an omitted list as empty.
+            if ipaddress.ip_address(host.get('ip', '')) != ipaddress.ip_address(ip):
+                raise ValueError('Unexpected host identity')
+            observations = []
+        if not isinstance(observations, list):
+            raise ValueError('Invalid services response')
+        ports = {s['port'] for s in observations}
+        if any(type(port) is not int or not 1 <= port <= 65535 for port in ports):
+            raise ValueError('Invalid service port')
+        write_json(data_dir / 'censys_latest.json', host)
+        open_ports.set(len(ports))
+        services.set(len(observations))
+        last_success.set(time.time())
+        success.set(1)
+        logging.info('Censys lookup succeeded: %d ports, %d services', len(ports), len(observations))
+        return True
+    except (requests.RequestException, ValueError, KeyError, TypeError, OSError) as error:
+        logging.warning('Censys lookup failed (HTTP %s, %s); check configuration, quota and availability',
+                        status if status is not None else 'unavailable', type(error).__name__)
+        open_ports.set(math.nan)
+        services.set(math.nan)
+        success.set(0)
+        return False
 
-# THIS WILL KEEP THE CONTAINER ALIVE FOREVER
-start_http_server(8000)
-print("CENSYS EXPORTER IS ALIVE ON PORT 8000")
-scan()
-while True:
-    time.sleep(3600)
-    scan()
+
+def main():
+    load_config()
+    configure_logging()
+    token = os.getenv('CENSYS_TOKEN', '').strip()
+    ip = os.getenv('MY_PUBLIC_IP', '').strip()
+    configured = bool(token and ip)
+    if configured:
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            logging.error('MY_PUBLIC_IP must be an IPv4 or IPv6 address')
+            configured = False
+    enabled.set(int(configured))
+    open_ports.set(math.nan)
+    services.set(math.nan)
+    start_http_server(8000)
+    if not configured:
+        logging.warning('Censys disabled: configure CENSYS_TOKEN and MY_PUBLIC_IP')
+    data_dir = Path(os.getenv('DATA_DIR', str(Path(__file__).resolve().parents[1] / 'data')))
+    while True:
+        if configured:
+            scan(token, ip, data_dir, os.getenv('CENSYS_ORGANIZATION_ID', '').strip())
+        time.sleep(3600)
+
+
+if __name__ == '__main__':
+    main()

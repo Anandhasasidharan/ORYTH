@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: censys
+    static_configs:
+      - targets: ["censys:8000"]
+  - job_name: xposedornot
+    static_configs:
+      - targets: ["xposedornot:8001"]

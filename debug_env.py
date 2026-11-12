@@ -1,6 +1,15 @@
+"""Report configuration presence without exposing secret values."""
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
-print("CENSYS_TOKEN:", os.getenv('CENSYS_TOKEN'))
-print("MY_PUBLIC_IP:", os.getenv('MY_PUBLIC_IP'))
+
+def main():
+    load_dotenv(Path(__file__).resolve().parent / '.env')
+    for name in ('CENSYS_TOKEN', 'MY_PUBLIC_IP', 'CENSYS_ORGANIZATION_ID',
+                 'MY_EMAILS', 'GRAFANA_ADMIN_PASSWORD'):
+        print(f'{name}: {"configured" if os.getenv(name, "").strip() else "missing"}')
+
+
+if __name__ == '__main__':
+    main()

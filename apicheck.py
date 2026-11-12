@@ -1,34 +1,32 @@
+"""Perform one configured Censys lookup and return a useful exit status."""
+import ipaddress
 import os
-from dotenv import load_dotenv
-from shodan import Shodan
+from pathlib import Path
+import runpy
+import sys
 
-# Load environment variables from .env file
-load_dotenv()
 
-SHODAN_API_KEY = os.getenv('SHODAN_API_KEY')
-
-if not SHODAN_API_KEY:
-    raise ValueError("SHODAN_API_KEY not found in environment variables. Please check your .env file.")
-
-api = Shodan(SHODAN_API_KEY)
-
-MY_IP = os.getenv('MY_PUBLIC_IP')
-
-# Lookup an IP
-if MY_IP:
-    print(f"Looking up IP: {MY_IP}")
+def main():
+    root = Path(__file__).resolve().parent
+    sys.path.insert(0, str(root / 'scripts'))
+    from monitor_common import configure_logging, load_config
+    load_config()
+    configure_logging()
+    token = os.getenv('CENSYS_TOKEN', '').strip()
+    ip = os.getenv('MY_PUBLIC_IP', '').strip()
+    if not token or not ip:
+        print('Configure CENSYS_TOKEN and MY_PUBLIC_IP in .env first.')
+        return 2
     try:
-        ipinfo = api.host(MY_IP)
-        print(ipinfo)
-    except Exception as e:
-        print(f"Error looking up {MY_IP}: {e}")
-else:
-    print("MY_PUBLIC_IP not set in .env")
+        ipaddress.ip_address(ip)
+    except ValueError:
+        print('MY_PUBLIC_IP must be an IPv4 or IPv6 address.')
+        return 2
+    monitor = runpy.run_path(str(root / 'scripts' / 'censys-monitor.py'))
+    ok = monitor['scan'](token, ip, Path(os.getenv('DATA_DIR', str(root / 'data'))),
+                         os.getenv('CENSYS_ORGANIZATION_ID', '').strip())
+    return 0 if ok else 1
 
-# Search for websites that have been "hacked"
-for banner in api.search_cursor('http.title:"hacked by"'):
-    print(banner)
 
-# Get the total number of industrial control systems services on the Internet
-ics_services = api.count('tag:ics')
-print('Industrial Control Systems: {}'.format(ics_services['total']))
+if __name__ == '__main__':
+    sys.exit(main())

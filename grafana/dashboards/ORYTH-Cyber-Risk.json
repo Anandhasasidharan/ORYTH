@@ -1,48 +1,604 @@
 {
-  "title": "ORYTH — Personal Cyber Risk Dashboard",
-  "style": "dark",
+  "uid": "oryth-cyber-risk",
+  "title": "ORYTH \u2014 Personal Cyber Risk Dashboard",
+  "tags": [
+    "oryth",
+    "security"
+  ],
+  "timezone": "browser",
   "panels": [
     {
-      "type": "stat",
+      "id": 1,
       "title": "Open Ports (Censys)",
-      "gridPos": {"x": 0, "y": 0, "w": 8, "h": 8},
-      "targets": [{"expr": "censys_open_ports_total or on() vector(0)", "refId": "A"}],
-      "datasource": {"type": "prometheus", "uid": "Prometheus-Censys"},
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]},
-          "unit": "short"
-        }
-      },
-      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}}
-    },
-    {
+      "description": "Distinct port numbers observed by Censys. Missing/indexing/API failures remain unknown. Observations are not a live port scan.",
       "type": "stat",
-      "title": "Censys Risk Score",
-      "gridPos": {"x": 8, "y": 0, "w": 8, "h": 8},
-      "targets": [{"expr": "censys_risk_score or on() vector(0)", "refId": "A"}],
-      "datasource": {"type": "prometheus", "uid": "Prometheus-Censys"},
+      "datasource": {
+        "type": "prometheus",
+        "uid": "oryth-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "censys_open_ports_total and on(job) (censys_scrape_success == 1) and on(job) (up{job=\"censys\"} == 1)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{email}}",
+          "range": false
+        }
+      ],
       "fieldConfig": {
         "defaults": {
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 3}, {"color": "red", "value": 6}]},
-          "max": 10
+          "unit": "short",
+          "noValue": "Unknown",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
         }
       }
     },
     {
+      "id": 2,
+      "title": "Observed Services (Censys)",
+      "description": "",
       "type": "stat",
-      "title": "Total Email Breaches",
-      "gridPos": {"x": 16, "y": 0, "w": 8, "h": 8},
-      "targets": [{"expr": "sum(hibp_breaches_total) or on() vector(0)", "refId": "A"}],
-      "datasource": {"type": "prometheus", "uid": "Prometheus-HIBP"},
+      "datasource": {
+        "type": "prometheus",
+        "uid": "oryth-prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "censys_services_total and on(job) (censys_scrape_success == 1) and on(job) (up{job=\"censys\"} == 1)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{email}}",
+          "range": false
+        }
+      ],
       "fieldConfig": {
         "defaults": {
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}
+          "unit": "short",
+          "noValue": "Unknown",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Total Email Breaches",
+      "description": "Sum across configured emails, including repeated breaches across addresses. Unknown if any lookup failed. Source: XposedOrNot free API. Counts reflect its breach database; breach dates are unavailable from the basic endpoint.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "oryth-prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "(sum(xposedornot_breaches_total) and on() (min(xposedornot_scrape_success) == 1)) and on() (max(up{job=\"xposedornot\"}) == 1)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{email}}",
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Unknown",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Censys Enabled",
+      "description": "",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "oryth-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "censys_monitor_enabled and on(job) (up{job=\"censys\"} == 1)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{email}}",
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Unknown",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Disabled / failed",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "OK",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Censys Last Lookup",
+      "description": "",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "oryth-prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 5,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "censys_scrape_success and on(job) (up{job=\"censys\"} == 1)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{email}}",
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Unknown",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Disabled / failed",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "OK",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "XposedOrNot Enabled",
+      "description": "Source: XposedOrNot free API. Counts reflect its breach database; breach dates are unavailable from the basic endpoint.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "oryth-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "xposedornot_monitor_enabled and on(job) (up{job=\"xposedornot\"} == 1)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{email}}",
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Unknown",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Disabled / failed",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "OK",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "All XposedOrNot Lookups Successful",
+      "description": "Source: XposedOrNot free API. Counts reflect its breach database; breach dates are unavailable from the basic endpoint.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "oryth-prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 5,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "min(xposedornot_scrape_success) and on() (max(up{job=\"xposedornot\"}) == 1)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{email}}",
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Unknown",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Disabled / failed",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "OK",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Seconds Since Successful Censys Lookup",
+      "description": "",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "oryth-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "(time() - censys_last_success_timestamp_seconds) and (censys_last_success_timestamp_seconds > 0) and on(job) (up{job=\"censys\"} == 1)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{email}}",
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "Unknown",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Seconds Since Successful XposedOrNot Lookup",
+      "description": "Source: XposedOrNot free API. Counts reflect its breach database; breach dates are unavailable from the basic endpoint.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "oryth-prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 10,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "(time() - xposedornot_last_success_timestamp_seconds) and (xposedornot_last_success_timestamp_seconds > 0) and on(job) (up{job=\"xposedornot\"} == 1)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{email}}",
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "Unknown",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Breaches per Email",
+      "description": "Source: XposedOrNot free API. Counts reflect its breach database; breach dates are unavailable from the basic endpoint.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "oryth-prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 10,
+        "w": 8,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "xposedornot_breaches_total and on(job, email) (xposedornot_scrape_success == 1) and on(job) (up{job=\"xposedornot\"} == 1)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{email}}",
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Unknown",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
         }
       }
     }
   ],
-  "refresh": "5m",
-  "schemaVersion": 38,
-  "version": 1
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "schemaVersion": 39,
+  "version": 3
 }
