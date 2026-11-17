@@ -1,103 +1,136 @@
-# ORYTH — Personal Cyber Risk Dashboard
+<div align="center">
 
-A Windows desktop app for monitoring email breach exposure and optional public-IP exposure. It runs locally, manages its own dashboard, and uses the free XposedOrNot email API. No Python, WSL, containers, or paid breach API key is required for the Windows download.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/hero-light.svg">
+  <img alt="ORYTH — Personal Cyber Exposure Dashboard for Windows" src="docs/assets/hero-light.svg" width="100%">
+</picture>
 
-## Windows quick start
+### Known exposure. One local dashboard.
 
-1. Download **ORYTH-Windows-x64.zip** from [Releases](https://github.com/Anandhasasidharan/ORYTH/releases).
-2. Extract the ZIP and double-click **ORYTH.exe**.
-3. Enter the email addresses you want to monitor.
-4. Optional: choose **Shodan** or **Censys**, enter your public IP, and enter your own provider API key/token.
-5. Click **Start monitoring**. The first start downloads and verifies Grafana and Prometheus automatically. Later starts reuse the cached components.
-6. Click **Copy password**, then **Open dashboard**. Sign in as **admin** using the copied password.
+Free email-breach checks, optional Shodan or Censys observations, and clear monitoring health — managed from a Windows desktop app.
 
-Keep the desktop window open while monitoring. **Stop** or closing the window stops all four local processes. Windows 10/11 **x64**, internet access, and free space for the downloaded components are required. No administrator installation or Windows service setup is needed. The application is currently an unsigned desktop preview; release checks cover executable startup and the native stack, rather than a formal Windows compatibility certification.
+[![Windows build](https://img.shields.io/github/actions/workflow/status/Anandhasasidharan/ORYTH/windows.yml?branch=main&style=for-the-badge&label=Windows%20build)](https://github.com/Anandhasasidharan/ORYTH/actions/workflows/windows.yml)
+[![Latest preview](https://img.shields.io/github/v/release/Anandhasasidharan/ORYTH?include_prereleases&style=for-the-badge&color=8B5CF6&label=Latest%20preview)](https://github.com/Anandhasasidharan/ORYTH/releases)
+[![Downloads](https://img.shields.io/github/downloads/Anandhasasidharan/ORYTH/total?style=for-the-badge&color=0891B2)](https://github.com/Anandhasasidharan/ORYTH/releases)
 
-## What it monitors
+![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-0078D4?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
+![Tkinter](https://img.shields.io/badge/Desktop-Tkinter-0D9488?style=flat-square)
+![Prometheus](https://img.shields.io/badge/Metrics-Prometheus-E6522C?style=flat-square&logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Dashboard-Grafana-F46800?style=flat-square&logo=grafana&logoColor=white)
 
-- **Email breaches:** XposedOrNot is checked daily. Results show known breach counts for each address and the total across monitored addresses. A breach affecting two addresses counts twice in that total. No breach API key is needed.
-- **Network exposure (optional):** your selected provider, **Shodan** or **Censys**, is checked hourly for recorded port and service observations on the configured public IP. Shodan requires an API key with host-lookup access; Censys requires a Platform token. ORYTH reads existing records and never submits an on-demand scan. The dashboard identifies the selected provider. Existing Censys settings retain their provider when upgraded.
-- **Monitoring health:** the dashboard displays integration status and time since the last successful lookup. Missing or failed lookups remain unknown; they are never silently reported as clean results.
+[![Download Windows app](https://img.shields.io/badge/Download-Windows%20app-7C3AED?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Anandhasasidharan/ORYTH/releases)
+[![Read the quick start](https://img.shields.io/badge/Read-Quick%20start-0284C7?style=for-the-badge&logo=readthedocs&logoColor=white)](docs/GETTING_STARTED.md)
 
-The free XposedOrNot endpoint supports 25 checks/hour and 100/day per public IP. ORYTH spaces requests, enforces the hourly budget within a daily cycle, accepts at most 100 unique addresses, and honors rate-limit backoff. Other users of your public IP and repeated app restarts share the provider's quota. Breach coverage may differ from other providers. The basic endpoint returns breach names rather than dates, so ORYTH does not invent a days-since-breach result.
+[Features](#-what-you-get) · [Quick start](#-start-here) · [Architecture](#-how-data-moves) · [Documentation](#-explore-the-docs) · [Validation](#-verified-windows-preview)
 
-## Where your data goes
+</div>
 
-When monitoring starts, configured email addresses are sent over HTTPS to `api.xposedornot.com`. If network monitoring is enabled, the configured public IP and credential are sent to **only the selected provider**: `api.shodan.io` for Shodan or `api.platform.censys.io` for Censys. Shodan places its key in HTTPS query parameters; ORYTH never logs request URLs, exception text, or response bodies from failed Shodan calls. No monitoring API requests are made by the desktop window until you start monitoring. No shared API key is included in the executable, repository, release archive or CI. Each user supplies their own credentials locally.
+> [!TIP]
+> **No Python, WSL, or container setup required for the Windows download.** Extract the ZIP, open `ORYTH.exe`, and enter your settings. First start downloads and verifies the dashboard components.
 
-Settings, your provider keys/tokens, generated dashboard password, downloaded components, logs, snapshots, and metrics are stored under:
+## ✨ What you get
 
-```text
-%LOCALAPPDATA%\ORYTH
+| | Feature | What it does |
+| :---: | --- | --- |
+| 🟢 | **Email breach exposure** | Free, keyless daily checks with XposedOrNot. View per-address counts and a complete total when all lookups succeed. |
+| 🔵 | **Your choice of network provider** | Select Shodan or Censys for hourly lookups of recorded ports and services on your public IP. |
+| 🟣 | **Monitoring you can inspect** | See which provider is selected, whether checks succeeded, and how old the last successful result is. |
+| 🟠 | **A local dashboard** | Prometheus records measurements; Grafana displays them. Both listen on your own computer. |
+| 🟢 | **Desktop control** | Start, stop, prepare components, copy the dashboard password, and open your data folder from one window. |
+| 🔵 | **Honest failure states** | Failed lookups stay unknown. Unavailable data is never silently reported as zero exposure. |
+
+## 🚀 Start here
+
+1. Download **`ORYTH-Windows-x64.zip`** from [Releases](https://github.com/Anandhasasidharan/ORYTH/releases).
+2. Extract the ZIP and double-click **`ORYTH.exe`**.
+3. Enter the email addresses you want to monitor. Network monitoring is optional: select **Shodan** or **Censys**, then enter your public IP and your own provider credential.
+4. Click **Start monitoring** and allow first-run component preparation to finish.
+5. Click **Copy password**, then **Open dashboard**. Sign in as **`admin`** with the copied password.
+
+**Windows 10/11 x64 · Internet required · Keep the app window open while monitoring**
+
+The executable is an unsigned preview. Closing it stops the local services. [Full setup guide →](docs/GETTING_STARTED.md)
+
+## 🧭 How data moves
+
+```mermaid
+flowchart LR
+    X["XposedOrNot<br/>Known email breaches"] --> E["Python email exporter"]
+    S["Shodan or Censys<br/>Recorded host observations"] --> N["Python network exporter"]
+    E --> P["Prometheus<br/>Metrics and history"]
+    N --> P
+    P --> G["Grafana<br/>Local dashboard"]
+    A["ORYTH Windows app<br/>Configure · start · stop"] -. "manages local services" .-> P
+
+    classDef email fill:#065f46,stroke:#34d399,color:#ffffff;
+    classDef network fill:#164e63,stroke:#22d3ee,color:#ffffff;
+    classDef metrics fill:#5b21b6,stroke:#c4b5fd,color:#ffffff;
+    classDef view fill:#9a3412,stroke:#fdba74,color:#ffffff;
+    classDef app fill:#1e293b,stroke:#94a3b8,color:#ffffff;
+    class X,E email;
+    class S,N network;
+    class P metrics;
+    class G view;
+    class A app;
 ```
 
-Use **Open data folder** to find them. Settings are local to your Windows account, not bundled into the executable or committed to this repository. The dashboard password is generated on first use and saved with the settings. Initial credentials do not reset an existing Grafana database.
+The arrows show data flow. Prometheus **pulls** metrics from the exporters every **15 seconds**; provider lookups run roughly **hourly** for network data and **daily** for email data. The desktop app manages all four local processes. [Architecture and timing →](docs/ARCHITECTURE.md)
 
-Grafana, Prometheus and both exporters listen only on the local computer: ports **3000**, **9090**, **8000**, and **8001**. Another app using one of those ports must be stopped before ORYTH starts. Metrics are retained for 30 days. Failed lookups preserve the last successful JSON snapshot while marking current metrics as unknown. Old snapshots are not loaded as current results at startup.
+> [!NOTE]
+> ORYTH reads existing provider records. It does **not** submit active scans, predict attacks with AI, or guarantee that an address is safe when no matching data is found.
 
-## Build the Windows application
+## 📚 Explore the docs
 
-Use Windows with Python **3.12 x64**, including Tcl/Tk. From the repository root, in PowerShell:
+| Guide | What you will find |
+| --- | --- |
+| [🚀 Getting started](docs/GETTING_STARTED.md) | Windows setup, credentials, first-run downloads, and everyday use |
+| [🧩 Architecture](docs/ARCHITECTURE.md) | Components, schedules, process lifecycle, metrics, and source-code map |
+| [🛠️ Development](docs/DEVELOPMENT.md) | Source setup, Windows builds, tests, and release automation |
+| [🔒 Privacy and data](docs/PRIVACY.md) | Which providers receive data, local storage, credentials, and limitations |
+| [🩺 Troubleshooting](docs/TROUBLESHOOTING.md) | Startup, port conflicts, download issues, authentication, and unknown results |
+| [✅ Validation record](VALIDATION.md) | Recorded Windows test and release evidence |
+| [🤝 Contributing](CONTRIBUTING.md) | Development practices and safe test data |
+| [📦 Third-party components](THIRD_PARTY.md) | Runtime components, sources, and licenses |
 
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-build.txt
-.\.venv\Scripts\python.exe -m pytest -q
-.\.venv\Scripts\python.exe -m PyInstaller --clean --noconfirm ORYTH.spec
-```
+## ✅ Verified Windows preview
 
-`dist\ORYTH.exe` is a portable executable containing the Python app and its Python/Tk dependencies. It downloads the independent dashboard components on first start; they are not part of the executable. Only selected scripts and public configuration are bundled. `.env`, user settings, personal snapshots, development caches, and logs are excluded.
+The [v0.3.0 build](https://github.com/Anandhasasidharan/ORYTH/actions/runs/44070440175) passed:
 
-To create the distributable ZIP and checksum file, activate the virtual environment and run:
+| Automated tests | Packaged provider modes | Dashboard queries per mode |
+| :---: | :---: | :---: |
+| **99 passed on Windows** | **Shodan + Censys** | **11 passed** |
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-.\packaging\build-windows.ps1
-```
+The workflow also checked packaged desktop startup, provider-switch credential retention, expected synthetic metrics, native Grafana/Prometheus startup, cleanup, and the distribution checksum. These are recorded release results; the build and release badges above update independently.
 
-The output is `dist\ORYTH-Windows-x64.zip` and `dist\SHA256SUMS.txt`. The [Windows application workflow](https://github.com/Anandhasasidharan/ORYTH/actions/workflows/windows.yml) runs the tests, builds the executable on Windows, checks the packaged desktop window, and tests the packaged app with **both network providers** against real Windows Grafana and Prometheus processes with synthetic API data. An optional manual workflow input publishes a preview release only after those checks and distribution checksum verification pass. Successful builds upload the ZIP and its checksum as workflow artifacts.
+<details>
+<summary><strong>Why does the app download Prometheus and Grafana?</strong></summary>
 
-## Run from source
+Prometheus stores numerical measurements over time. Grafana turns them into the dashboard. The desktop app downloads their official binaries on first start, verifies publisher SHA256 checksums, and reuses them later. [Details →](docs/ARCHITECTURE.md#the-two-dashboard-components)
 
-On Windows, install `requirements.txt` and launch:
+</details>
 
-```powershell
-python oryth_app.py
-```
+<details>
+<summary><strong>Do I need a paid API key?</strong></summary>
 
-The same desktop code also supports Linux x64 with Tcl/Tk installed. An optional console launcher is available for WSL/Linux or development:
+Email checks use the free XposedOrNot endpoint without a key. Network monitoring is optional and requires your own provider credential. Shodan host lookup requires suitable account access; having a key alone may not grant it. Censys access depends on the account's entitlements. [Provider setup →](docs/GETTING_STARTED.md#choose-your-monitoring-options)
 
-```bash
-python3 scripts/run-local.py
-```
+</details>
 
-Console mode can read a local `.env` copied from `config/.env.example`, or use saved application settings. The desktop app uses its setup form and per-user settings instead of requiring `.env`. For source-mode network checks, set `NETWORK_PROVIDER=shodan` with `SHODAN_API_KEY` and `MY_PUBLIC_IP`, or select `censys` with `CENSYS_TOKEN`. Older `HIBP_API_KEY` entries are ignored. Runtime binaries are downloaded automatically, or can be supplied through the console launcher's `--runtime` argument. Existing development binaries under `/tmp/oryth-native-runtime` can be reused with that argument.
+<details>
+<summary><strong>Where are my settings and results stored?</strong></summary>
 
-## Tests and troubleshooting
+Under `%LOCALAPPDATA%\ORYTH` for your Windows account. Provider credentials are not bundled in the app or CI, but settings are not encrypted by this implementation. Email addresses and the selected network target are sent to their respective providers when monitoring starts. [Privacy details →](docs/PRIVACY.md)
 
-Install `requirements-dev.txt`, then run the unit tests:
+</details>
 
-```bash
-python3 -m pytest -q
-```
+---
 
-To run the synthetic native stack test from source:
+<div align="center">
 
-```bash
-python3 tests/smoke_native.py
-```
+**Understand what is known. See when a check fails. Stay in control of your monitoring.**
 
-The test starts real local services, verifies expected metrics, checks dashboard provisioning and all 11 dashboard queries, then stops the services. External API calls are replaced with synthetic responses; your email addresses and credentials are not sent to either provider. It prints the validation report path.
+[Download](https://github.com/Anandhasasidharan/ORYTH/releases) · [Read the docs](docs/README.md) · [Report an issue](https://github.com/Anandhasasidharan/ORYTH/issues)
 
-For a packaged executable, `--self-test --provider shodan --report <path>` runs the Shodan test; `--provider censys` selects the compatibility test; `--check-gui --report <path>` checks that its desktop window can be created. These commands are intended for release validation.
-
-If startup fails, open the data folder and inspect `logs`. A port-conflict message means another instance or application is running. Failed downloads can be retried with **Start monitoring**; archives must match upstream SHA256 checksums before they are installed. Dashboard availability confirms the local services are running; check the lookup-status panels separately for API success. Authentication or quota errors remain visible as failed lookups.
-
-## References
-
-- [XposedOrNot free API and limits](https://xposedornot.com/api_doc)
-- [Shodan host lookup and account access](https://help.shodan.io/developer-fundamentals/looking-up-ip-info)
-- [Censys host lookup and authentication](https://docs.censys.com/reference/get-started)
-- [Grafana Windows installation](https://grafana.com/docs/grafana/latest/setup-grafana/installation/windows/)
-- [Prometheus downloads](https://prometheus.io/download/)
-- [Third-party components](THIRD_PARTY.md)
+</div>
