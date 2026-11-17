@@ -9,8 +9,8 @@
   "panels": [
     {
       "id": 1,
-      "title": "Open Ports (Censys)",
-      "description": "Distinct port numbers observed by Censys. Missing/indexing/API failures remain unknown. Observations are not a live port scan.",
+      "title": "Open Ports (Network)",
+      "description": "Distinct port numbers observed by the selected provider. Missing/indexing/API failures remain unknown. Observations are not a live port scan.",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -24,7 +24,7 @@
       },
       "targets": [
         {
-          "expr": "censys_open_ports_total and on(job) (censys_scrape_success == 1) and on(job) (up{job=\"censys\"} == 1)",
+          "expr": "network_observed_ports and on(job) (network_lookup_success == 1) and on(job) (up{job=\"network\"} == 1)",
           "refId": "A",
           "instant": true,
           "legendFormat": "{{email}}",
@@ -64,7 +64,7 @@
     },
     {
       "id": 2,
-      "title": "Observed Services (Censys)",
+      "title": "Observed Services (Network)",
       "description": "",
       "type": "stat",
       "datasource": {
@@ -79,7 +79,7 @@
       },
       "targets": [
         {
-          "expr": "censys_services_total and on(job) (censys_scrape_success == 1) and on(job) (up{job=\"censys\"} == 1)",
+          "expr": "network_observed_services and on(job) (network_lookup_success == 1) and on(job) (up{job=\"network\"} == 1)",
           "refId": "A",
           "instant": true,
           "legendFormat": "{{email}}",
@@ -174,7 +174,7 @@
     },
     {
       "id": 4,
-      "title": "Censys Enabled",
+      "title": "Network Monitoring Enabled",
       "description": "",
       "type": "stat",
       "datasource": {
@@ -189,7 +189,7 @@
       },
       "targets": [
         {
-          "expr": "censys_monitor_enabled and on(job) (up{job=\"censys\"} == 1)",
+          "expr": "network_monitor_enabled and on(job) (up{job=\"network\"} == 1)",
           "refId": "A",
           "instant": true,
           "legendFormat": "{{email}}",
@@ -240,7 +240,7 @@
     },
     {
       "id": 5,
-      "title": "Censys Last Lookup",
+      "title": "Network Last Lookup",
       "description": "",
       "type": "stat",
       "datasource": {
@@ -255,7 +255,7 @@
       },
       "targets": [
         {
-          "expr": "censys_scrape_success and on(job) (up{job=\"censys\"} == 1)",
+          "expr": "network_lookup_success and on(job) (up{job=\"network\"} == 1)",
           "refId": "A",
           "instant": true,
           "legendFormat": "{{email}}",
@@ -438,7 +438,7 @@
     },
     {
       "id": 8,
-      "title": "Seconds Since Successful Censys Lookup",
+      "title": "Seconds Since Successful Network Lookup",
       "description": "",
       "type": "stat",
       "datasource": {
@@ -453,7 +453,7 @@
       },
       "targets": [
         {
-          "expr": "(time() - censys_last_success_timestamp_seconds) and (censys_last_success_timestamp_seconds > 0) and on(job) (up{job=\"censys\"} == 1)",
+          "expr": "(time() - network_last_success_timestamp_seconds) and (network_last_success_timestamp_seconds > 0) and on(job) (up{job=\"network\"} == 1)",
           "refId": "A",
           "instant": true,
           "legendFormat": "{{email}}",
@@ -592,6 +592,47 @@
           "fields": ""
         }
       }
+    },
+    {
+      "id": 11,
+      "title": "Network Data Provider",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "oryth-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "network_provider_info and on(job) (up{job=\"network\"} == 1)",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{provider}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown"
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "name",
+        "colorMode": "none",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
     }
   ],
   "refresh": "30s",
@@ -600,5 +641,5 @@
     "to": "now"
   },
   "schemaVersion": 39,
-  "version": 3
+  "version": 4
 }

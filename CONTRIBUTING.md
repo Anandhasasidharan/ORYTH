@@ -7,3 +7,5 @@ Desktop code lives under `oryth/`. `oryth_app.py` starts the window or a package
 Use `python tests/smoke_native.py` for a local integration test with synthetic data. Keep all Tk calls on the UI thread and clean up every child process on stop, failed startup, and cancelled setup.
 
 Keep credentials out of source, build artifacts, and logs. Desktop settings belong under the user's application-data directory. `.env` is optional for source-mode console use only. Preserve unknown/error states rather than turning unavailable API data into clean security results. Do not commit personal snapshots, local settings, downloaded runtimes, or build output.
+
+Network provider changes must preserve legacy Censys settings and provider-neutral dashboard metrics. Test both packaged network modes. Never put real Shodan or Censys keys in source, CI fixtures, build resources, snapshots committed to Git, or release notes. Shodan API errors must not log URLs because the key is a query parameter.

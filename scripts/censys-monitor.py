@@ -7,15 +7,18 @@ from pathlib import Path
 import time
 
 import requests
-from prometheus_client import Gauge, start_http_server
+from prometheus_client import start_http_server
 
 from monitor_common import configure_logging, load_config, write_json
 
-open_ports = Gauge('censys_open_ports_total', 'Distinct observed port numbers')
-services = Gauge('censys_services_total', 'Observed services')
-enabled = Gauge('censys_monitor_enabled', 'Censys credentials and IP configured')
-success = Gauge('censys_scrape_success', 'Last Censys lookup succeeded')
-last_success = Gauge('censys_last_success_timestamp_seconds', 'Last successful lookup')
+from network_metrics import NetworkMetrics
+
+metrics = NetworkMetrics('censys', 'Censys')
+open_ports = metrics.open_ports
+services = metrics.services
+enabled = metrics.enabled
+success = metrics.success
+last_success = metrics.last_success
 
 
 def scan(token, ip, data_dir, organization_id='', get=requests.get):

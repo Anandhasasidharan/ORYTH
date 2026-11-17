@@ -1,30 +1,22 @@
-# Desktop validation — 2026-11-12
+# Shodan Windows preview validation — 2026-11-17
 
-ORYTH 0.2.0 replaces the container setup with a native Windows desktop launcher, per-user settings, automatic verified runtime downloads, local-only services, process cleanup, and portable executable packaging.
+Version 0.3.0 adds Shodan as a selectable network provider, preserves existing Censys settings, and keeps provider keys in per-user configuration rather than in distributed builds. The four-process architecture remains: one selected network exporter, the email exporter, Prometheus and Grafana.
 
 ## Local checks
 
-- Unit suite: **74 passed** on Linux/WSL, covering monitors, response parsing, settings, archive checksums, unsafe archive paths, cancellation, process rollback, credential isolation, and configuration consistency.
-- The synthetic integration test runs the same entry points used by the desktop app, starts real Grafana and Prometheus, checks both exporters, validates expected metric values and all 10 dashboard queries, then stops the services.
-- Official Windows runtime archive and checksum URLs returned HTTP 200.
+- **99 automated tests passed** after the provider integration, including the existing Windows-backend and monitor coverage.
+- New tests cover Shodan response identity and port validation, distinct ports versus service observations, failure-as-unknown behavior, saved snapshots, key-safe error logs, disabled startup, provider selection, legacy settings migration, and credential isolation.
+- Provider-neutral dashboard measurements replace Censys-only queries; provider-specific aliases are retained for compatibility.
+- The dashboard has **11 queries**, including the selected-provider panel.
 
-## Windows release checks — passed
+## Authorized live checks
 
-[Windows build 43146547261](https://github.com/Anandhasasidharan/ORYTH/actions/runs/43146547261) passed on commit `5fda49e9c6335fa481e1afbbdb7019b05bf1e415`:
+The supplied Shodan key authenticated at the account-info endpoint with **HTTP 200**. A separate read-only lookup of Shodan's documented public sample IP returned **HTTP 200**, with two observed ports and three service observations. The parser accepted that real payload. No active scan was submitted, and no personal IP or email address was needed for these checks. The key itself is not included in this document, source, tests, CI or release artifacts.
 
-- All **74 unit tests passed on Windows**.
-- PyInstaller built the portable Windows x64 executable successfully.
-- The packaged executable created and ran its desktop window event loop successfully.
-- The packaged application downloaded and checksum-verified the official native Windows Grafana and Prometheus runtimes.
-- All four local HTTP services became healthy.
-- Expected synthetic values arrived in Prometheus: two ports, two services, and four email breach matches.
-- Grafana dashboard provisioning, datasource health and the dashboard HTML page passed.
-- All **10 dashboard queries passed** through both Prometheus and Grafana.
-- Service shutdown and cleanup passed.
-- Test data paths contained spaces to exercise common Windows user-folder paths.
+## Windows release gate
 
-The first Windows run exposed a missing Grafana SQLite parent directory. Startup now creates all service data folders explicitly, with regression coverage. The corrected build passed in full. The workflow retains JSON test reports and distributable artifacts. This is automated packaged-app validation; no claim is made about manual visual review or every Windows hardware configuration.
+The Windows workflow builds the actual portable executable, verifies desktop-window startup and credential retention across provider switching, and runs isolated synthetic stack tests with **both Shodan and Censys**. Each mode checks all four HTTP services, expected metrics, provider identity, Grafana datasource and dashboard health, all 11 dashboard queries, and process cleanup. Test paths contain spaces.
 
-## Provider checks from the previous implementation
+A manual publish request can create the v0.3.0 preview only after these checks pass and the distribution ZIP checksum is verified on the release runner. Consult the workflow run associated with the release commit for its final result; local tests alone do not establish Windows compatibility.
 
-XposedOrNot returned HTTP 200 for its documented public sample address. The real response passed parsing, metrics and atomic snapshot persistence. Censys returned HTTP 200 during an authorized lookup, and its omitted optional `services` field is covered by regression tests. Configured personal email addresses are not used in automated tests.
+The v0.2.0 Censys-only release remains available separately. Its earlier Windows validation passed 74 tests and ten dashboard queries. The interview guide describing v0.2.0 should be read as documentation of that earlier version.

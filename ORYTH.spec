@@ -3,7 +3,7 @@ from pathlib import Path
 
 root = Path(SPECPATH)
 datas = [(str(root / 'scripts' / name), 'scripts') for name in
-         ('censys-monitor.py', 'xposedornot-monitor.py', 'monitor_common.py')]
+         ('censys-monitor.py', 'shodan-monitor.py', 'xposedornot-monitor.py', 'monitor_common.py', 'network_metrics.py')]
 datas += [(str(root / 'grafana'), 'grafana'), (str(root / 'prometheus'), 'prometheus')]
 a = Analysis([str(root / 'oryth_app.py')], pathex=[str(root)], binaries=[], datas=datas,
              hiddenimports=['requests', 'prometheus_client', 'dotenv', 'ipaddress'],

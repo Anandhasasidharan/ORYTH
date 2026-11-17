@@ -11,15 +11,17 @@ from .services import DASHBOARD_URL, ServiceManager
 from .settings import user_directory
 
 
-def run(report_path=None, runtime=None):
+def run(report_path=None, runtime=None, provider='shodan'):
     report_path = Path(report_path or Path(tempfile.gettempdir()) / 'oryth-self-test.json').resolve()
     report_path.parent.mkdir(parents=True, exist_ok=True)
     state = Path(tempfile.mkdtemp(prefix='oryth-smoke-user space-', dir=report_path.parent))
     manager = ServiceManager(state, runtime=runtime or user_directory() / 'runtime')
     password = secrets.token_urlsafe(24)
-    settings = {'public_ip': '192.0.2.1', 'censys_token': 'synthetic-unused-token',
+    settings = {'network_provider': provider, 'public_ip': '192.0.2.1',
+                'shodan_api_key': 'synthetic-unused-key' if provider == 'shodan' else '',
+                'censys_token': 'synthetic-unused-token' if provider == 'censys' else '',
                 'emails': ['first@example.invalid', 'second@example.invalid'], 'dashboard_password': password}
-    report = {'mode': 'synthetic external API responses; real local services', 'checks': {}, 'state_directory': str(state)}
+    report = {'mode': 'synthetic external API responses; real local services', 'network_provider': provider, 'checks': {}, 'state_directory': str(state)}
     session = requests.Session()
     session.auth = ('admin', password)
     def query(expression):
@@ -41,8 +43,9 @@ def run(report_path=None, runtime=None):
             time.sleep(0.5)
         else:
             raise RuntimeError('Expected metrics did not reach Prometheus.')
-        assert query('censys_open_ports_total')[0]['value'][1] == '2'
-        assert query('censys_services_total')[0]['value'][1] == '2'
+        assert query('network_observed_ports')[0]['value'][1] == '2'
+        assert query('network_observed_services')[0]['value'][1] == '2'
+        assert query('network_provider_info')[0]['metric']['provider'] == provider.title()
         report['checks']['expected_metrics'] = 'PASS (2 ports, 2 services, 4 email breach matches)'
         response = session.get('http://127.0.0.1:3000/api/dashboards/uid/oryth-cyber-risk', timeout=10)
         response.raise_for_status()

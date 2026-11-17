@@ -65,7 +65,9 @@ class ServiceManager:
         (directory / 'prometheus.yml').write_text((self.root / 'prometheus/prometheus.yml').read_text(), encoding='utf-8')
         env = os.environ.copy()
         # Explicit values isolate each user configuration from shell variables and repo .env files.
-        env.update(CENSYS_TOKEN=settings['censys_token'], MY_PUBLIC_IP=settings['public_ip'],
+        env.update(CENSYS_TOKEN=settings['censys_token'] if settings['network_provider'] == 'censys' else '',
+                   SHODAN_API_KEY=settings['shodan_api_key'] if settings['network_provider'] == 'shodan' else '',
+                   NETWORK_PROVIDER=settings['network_provider'], MY_PUBLIC_IP=settings['public_ip'],
                    CENSYS_ORGANIZATION_ID=settings['organization_id'], MY_EMAILS=','.join(settings['emails']),
                    DATA_DIR=str(directory / 'snapshots'), PYTHONUNBUFFERED='1',
                    GF_PATHS_DATA=str(directory / 'grafana-data'), GF_PATHS_LOGS=str(directory / 'logs'),
@@ -92,7 +94,7 @@ class ServiceManager:
             grafana_command.append('server')
         grafana_command.append('--homepath=' + str(grafana_home))
         commands = {
-            'censys': exporter_command('censys', synthetic),
+            'network': exporter_command(validate_settings(settings)['network_provider'], synthetic),
             'xposedornot': exporter_command('xposedornot', synthetic),
             'prometheus': [str(binaries['prometheus']), '--config.file=' + str(self.directory / 'prometheus.yml'),
                            '--storage.tsdb.path=' + str(self.directory / 'prometheus-data'),

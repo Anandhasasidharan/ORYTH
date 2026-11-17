@@ -31,8 +31,8 @@ class DesktopApp:
             root.destroy()
             raise
         root.title('ORYTH — Personal Cyber Risk Dashboard')
-        root.geometry('680x660')
-        root.minsize(620, 630)
+        root.geometry('680x710')
+        root.minsize(620, 660)
         root.configure(bg='#f4f6fa')
         style = ttk.Style(root)
         if 'vista' in style.theme_names():
@@ -53,19 +53,36 @@ class DesktopApp:
         self.emails.grid(row=4, column=0, sticky='ew', pady=(0, 16))
         self.inputs.append(self.emails)
         ttk.Label(frame, text='Network exposure monitoring · optional', font=('Segoe UI', 11, 'bold')).grid(row=5, column=0, sticky='w')
+        self.provider = tk.StringVar(value=self.settings['network_provider'].title())
+        self._active_provider = self.settings['network_provider']
+        self._provider_keys = {'censys': self.settings['censys_token'], 'shodan': self.settings['shodan_api_key']}
         self.ip = tk.StringVar(value=self.settings['public_ip'])
-        self.token = tk.StringVar(value=self.settings['censys_token'])
+        self.token = tk.StringVar(value=self._provider_keys[self._active_provider])
         self.organization = tk.StringVar(value=self.settings['organization_id'])
         network = ttk.Frame(frame)
         network.grid(row=6, column=0, sticky='ew', pady=(8, 16))
         network.columnconfigure(1, weight=1)
-        for row, (label, variable, masked) in enumerate([
-                ('Public IP address', self.ip, False), ('Censys token', self.token, True),
-                ('Organization ID (optional)', self.organization, False)]):
-            ttk.Label(network, text=label).grid(row=row, column=0, sticky='w', padx=(0, 14), pady=4)
-            entry = ttk.Entry(network, textvariable=variable, show='•' if masked else '')
-            entry.grid(row=row, column=1, sticky='ew', pady=4)
-            self.inputs.append(entry)
+        ttk.Label(network, text='Data provider').grid(row=0, column=0, sticky='w', padx=(0, 14), pady=4)
+        self.provider_box = ttk.Combobox(network, textvariable=self.provider,
+                                         values=['Shodan', 'Censys'], state='readonly')
+        self.provider_box.grid(row=0, column=1, sticky='ew', pady=4)
+        self.provider_box.bind('<<ComboboxSelected>>', self.provider_changed)
+        self.inputs.append(self.provider_box)
+        ttk.Label(network, text='Public IP address').grid(row=1, column=0, sticky='w', padx=(0, 14), pady=4)
+        ip_entry = ttk.Entry(network, textvariable=self.ip)
+        ip_entry.grid(row=1, column=1, sticky='ew', pady=4)
+        self.inputs.append(ip_entry)
+        self.token_label = ttk.Label(network)
+        self.token_label.grid(row=2, column=0, sticky='w', padx=(0, 14), pady=4)
+        key_entry = ttk.Entry(network, textvariable=self.token, show='•')
+        key_entry.grid(row=2, column=1, sticky='ew', pady=4)
+        self.inputs.append(key_entry)
+        self.organization_label = ttk.Label(network, text='Organization ID (optional)')
+        self.organization_label.grid(row=3, column=0, sticky='w', padx=(0, 14), pady=4)
+        self.organization_entry = ttk.Entry(network, textvariable=self.organization)
+        self.organization_entry.grid(row=3, column=1, sticky='ew', pady=4)
+        self.inputs.append(self.organization_entry)
+        self.provider_changed()
         ttk.Label(frame, text='Dashboard sign-in', font=('Segoe UI', 11, 'bold')).grid(row=7, column=0, sticky='w')
         credentials = ttk.Frame(frame)
         credentials.grid(row=8, column=0, sticky='ew', pady=(6, 14))
@@ -91,6 +108,18 @@ class DesktopApp:
         root.protocol('WM_DELETE_WINDOW', self.close)
         root.after(150, self.process_events)
 
+    def provider_changed(self, event=None):
+        self._provider_keys[self._active_provider] = self.token.get()
+        self._active_provider = self.provider.get().lower()
+        self.token.set(self._provider_keys[self._active_provider])
+        self.token_label.configure(text='Shodan API key' if self._active_provider == 'shodan' else 'Censys token')
+        if self._active_provider == 'censys':
+            self.organization_label.grid()
+            self.organization_entry.grid()
+        else:
+            self.organization_label.grid_remove()
+            self.organization_entry.grid_remove()
+
     def copy_password(self):
         # Persist the generated password so a copied password remains valid after reopening.
         try:
@@ -111,14 +140,17 @@ class DesktopApp:
 
     def set_inputs(self, enabled):
         for widget in self.inputs:
-            widget.configure(state='normal' if enabled else 'disabled')
+            widget.configure(state=('readonly' if isinstance(widget, ttk.Combobox) else 'normal') if enabled else 'disabled')
 
     def start(self):
         if self.busy or self.running:
             return
         try:
+            self._provider_keys[self._active_provider] = self.token.get()
             values = {'emails': self.emails.get('1.0', 'end'), 'public_ip': self.ip.get(),
-                      'censys_token': self.token.get(), 'organization_id': self.organization.get(),
+                      'network_provider': self.provider.get().lower(),
+                      'shodan_api_key': self._provider_keys['shodan'],
+                      'censys_token': self._provider_keys['censys'], 'organization_id': self.organization.get(),
                       'dashboard_password': self.password.get()}
             self.settings = save_settings(self.directory, values)
         except (OSError, ValueError) as error:

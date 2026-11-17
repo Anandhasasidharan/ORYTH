@@ -20,9 +20,14 @@ def user_directory():
 
 def validate_settings(values):
     token = str(values.get('censys_token', '')).strip()
+    shodan_key = str(values.get('shodan_api_key', '')).strip()
     ip = str(values.get('public_ip', '')).strip()
-    if bool(token) != bool(ip):
-        raise ValueError('Enter both the public IP and Censys token, or leave both blank.')
+    provider = values.get('network_provider') or ('shodan' if shodan_key else 'censys' if token else 'shodan')
+    if provider not in ('shodan', 'censys'):
+        raise ValueError('Select Shodan or Censys as the network provider.')
+    credential = shodan_key if provider == 'shodan' else token
+    if bool(credential) != bool(ip):
+        raise ValueError('Enter both the public IP and selected provider key/token, or leave both blank.')
     if ip:
         try:
             ipaddress.ip_address(ip)
@@ -39,7 +44,8 @@ def validate_settings(values):
     if any(not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email) for email in emails):
         raise ValueError('Check the email addresses; each must look like name@example.com.')
     password = values.get('dashboard_password') or secrets.token_urlsafe(24)
-    return {'censys_token': token, 'public_ip': ip, 'emails': emails,
+    return {'network_provider': provider, 'shodan_api_key': shodan_key,
+            'censys_token': token, 'public_ip': ip, 'emails': emails,
             'organization_id': str(values.get('organization_id', '')).strip(),
             'dashboard_password': password}
 

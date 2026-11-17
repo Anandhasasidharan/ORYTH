@@ -19,11 +19,18 @@ def main():
     args = parser.parse_args()
     load_dotenv(Path(__file__).resolve().parents[1] / '.env')
     settings = load_settings(args.state)
-    settings.update(censys_token=os.getenv('CENSYS_TOKEN', settings['censys_token']),
+    settings.update(network_provider=os.getenv('NETWORK_PROVIDER', settings['network_provider']),
+                    shodan_api_key=os.getenv('SHODAN_API_KEY', settings['shodan_api_key']),
+                    censys_token=os.getenv('CENSYS_TOKEN', settings['censys_token']),
                     public_ip=os.getenv('MY_PUBLIC_IP', settings['public_ip']),
                     organization_id=os.getenv('CENSYS_ORGANIZATION_ID', settings['organization_id']),
                     emails=os.getenv('MY_EMAILS', ','.join(settings['emails'])),
                     dashboard_password=os.getenv('GRAFANA_ADMIN_PASSWORD', settings['dashboard_password']))
+    if not os.getenv('NETWORK_PROVIDER'):
+        if os.getenv('SHODAN_API_KEY'):
+            settings['network_provider'] = 'shodan'
+        elif os.getenv('CENSYS_TOKEN'):
+            settings['network_provider'] = 'censys'
     settings = validate_settings(settings)
     from oryth.settings import save_settings
     save_settings(args.state, settings)

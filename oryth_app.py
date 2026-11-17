@@ -19,8 +19,12 @@ def run_exporter(name, synthetic=False):
         sys.stderr = stream
     if synthetic:
         import requests
-        payload = ({'result': {'resource': {'ip': '192.0.2.1', 'services': [{'port': 80}, {'port': 443}]}}}
-                   if name == 'censys' else {'breaches': [['SyntheticOne', 'SyntheticTwo']], 'status': 'success'})
+        payloads = {
+            'censys': {'result': {'resource': {'ip': '192.0.2.1', 'services': [{'port': 80}, {'port': 443}]}}},
+            'shodan': {'ip_str': '192.0.2.1', 'ports': [80, 443], 'data': [{'port': 80}, {'port': 443}]},
+            'xposedornot': {'breaches': [['SyntheticOne', 'SyntheticTwo']], 'status': 'success'},
+        }
+        payload = payloads[name]
         def synthetic_get(*args, **kwargs):
             response = requests.Response()
             response.status_code = 200
@@ -32,10 +36,11 @@ def run_exporter(name, synthetic=False):
 
 def main():
     parser = argparse.ArgumentParser(description='ORYTH desktop application')
-    parser.add_argument('--exporter', choices=['censys', 'xposedornot'], help=argparse.SUPPRESS)
+    parser.add_argument('--exporter', choices=['censys', 'shodan', 'xposedornot'], help=argparse.SUPPRESS)
     parser.add_argument('--synthetic', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('--self-test', action='store_true', help='Run an isolated synthetic end-to-end test')
     parser.add_argument('--check-gui', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('--provider', choices=['shodan', 'censys'], default='shodan', help='Network provider for the synthetic self-test')
     parser.add_argument('--runtime', type=Path)
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
@@ -44,7 +49,7 @@ def main():
         return 0
     if args.self_test:
         from oryth.selftest import run
-        return run(args.report, args.runtime)
+        return run(args.report, args.runtime, args.provider)
     if args.check_gui:
         import tempfile
         import tkinter as tk
@@ -55,6 +60,16 @@ def main():
             app = DesktopApp(root, directory)
             root.update_idletasks()
             assert app.start_button['text'] == 'Start monitoring'
+            app.token.set('synthetic-shodan-key')
+            app.provider.set('Censys')
+            app.provider_changed()
+            app.token.set('synthetic-censys-token')
+            app.provider.set('Shodan')
+            app.provider_changed()
+            assert app.token.get() == 'synthetic-shodan-key'
+            app.provider.set('Censys')
+            app.provider_changed()
+            assert app.token.get() == 'synthetic-censys-token'
             root.after(100, root.destroy)
             root.mainloop()
         if args.report:

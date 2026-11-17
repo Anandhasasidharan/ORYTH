@@ -9,4 +9,4 @@ On first start the application downloads unmodified official x64 distributions o
 
 The downloaded archives retain the upstream license and notice files. Publisher SHA256 checksums are verified before extraction. These independent local processes provide the dashboard and metrics database.
 
-XposedOrNot provides the free email-breach API: https://xposedornot.com/api_doc. Network observations come from the optional Censys Platform API: https://docs.censys.com/reference/get-started.
+XposedOrNot provides the free email-breach API: https://xposedornot.com/api_doc. Network observations come from the selected Shodan API (https://developer.shodan.io/api) or Censys Platform API: https://docs.censys.com/reference/get-started.

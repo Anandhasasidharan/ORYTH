@@ -10,7 +10,7 @@ def test_scrape_targets_are_local_services():
     config = yaml.safe_load((ROOT / 'prometheus/prometheus.yml').read_text())
     targets = {scrape['job_name']: scrape['static_configs'][0]['targets'][0]
                for scrape in config['scrape_configs']}
-    assert targets == {'censys': '127.0.0.1:8000', 'xposedornot': '127.0.0.1:8001'}
+    assert targets == {'network': '127.0.0.1:8000', 'xposedornot': '127.0.0.1:8001'}
 
 
 def test_dashboard_and_provisioning_use_same_datasource():

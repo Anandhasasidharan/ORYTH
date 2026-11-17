@@ -4,6 +4,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the tested Windows preview release
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -32,14 +37,16 @@ jobs:
           if ($process.ExitCode -ne 0) { throw 'Packaged GUI failed to start.' }
           Get-Content $report
           if ((Get-Content $report | ConvertFrom-Json).gui -ne 'PASS') { throw 'GUI report did not pass.' }
-      - name: Test packaged app and Windows runtimes
+      - name: Test packaged app with Shodan and Censys
         shell: pwsh
         run: |
-          $report = Join-Path $env:RUNNER_TEMP 'oryth-smoke.json'
-          $process = Start-Process -FilePath './dist/ORYTH.exe' -ArgumentList @('--self-test', '--report', $report) -Wait -PassThru
-          if (Test-Path $report) { Get-Content $report }
-          if ($process.ExitCode -ne 0) { throw 'Packaged native services failed.' }
-          if ((Get-Content $report | ConvertFrom-Json).result -ne 'PASS') { throw 'Native stack report did not pass.' }
+          foreach ($provider in @('shodan', 'censys')) {
+            $report = Join-Path $env:RUNNER_TEMP "oryth-smoke-$provider.json"
+            $process = Start-Process -FilePath './dist/ORYTH.exe' -ArgumentList @('--self-test', '--provider', $provider, '--report', $report) -Wait -PassThru
+            if (Test-Path $report) { Get-Content $report }
+            if ($process.ExitCode -ne 0) { throw "Packaged $provider services failed." }
+            if ((Get-Content $report | ConvertFrom-Json).result -ne 'PASS') { throw "$provider native stack report did not pass." }
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: ORYTH-Windows-x64
@@ -54,6 +61,26 @@ jobs:
           name: Windows-validation
           path: |
             ${{ runner.temp }}/oryth-gui.json
-            ${{ runner.temp }}/oryth-smoke.json
+            ${{ runner.temp }}/oryth-smoke-*.json
             ${{ runner.temp }}/oryth-smoke-*/logs/*.log
           if-no-files-found: ignore
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    needs: windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ORYTH-Windows-x64
+          path: release
+      - name: Verify distribution checksum
+        working-directory: release
+        run: sha256sum -c SHA256SUMS.txt
+      - name: Publish Windows preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create v0.3.0 release/ORYTH-Windows-x64.zip release/SHA256SUMS.txt --target "$GITHUB_SHA" --title "ORYTH 0.3.0 — Shodan Windows preview" --notes-file packaging/RELEASE_NOTES.md --prerelease
